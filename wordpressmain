@@ -1,0 +1,94 @@
+<?php
+/**
+ * Plugin Name: Stripe Payment Integration
+ * Description: Integrate Stripe payment into your WordPress site.
+ * Version: 1.0
+ * Author: Your Name
+ * Author URI: Your Website
+ */
+
+// Plugin activation hook
+function stripe_payment_integration_activate() {
+    // Add any activation code if necessary
+}
+register_activation_hook(__FILE__, 'stripe_payment_integration_activate');
+
+// Plugin deactivation hook
+function stripe_payment_integration_deactivate() {
+    // Add any deactivation code if necessary
+}
+register_deactivation_hook(__FILE__, 'stripe_payment_integration_deactivate');
+function stripe_payment_integration_enqueue_scripts() {
+    // Enqueue Stripe JavaScript library
+    wp_enqueue_script('stripe-js', 'https://js.stripe.com/v3/', array(), '3.0', true);
+
+    // Enqueue your custom JavaScript file
+    wp_enqueue_script('custom-stripe-payment', plugins_url('js/stripe-payment.js', __FILE__), array('stripe-js'), '1.0', true);
+
+    // Enqueue your custom CSS file
+    wp_enqueue_style('custom-stripe-payment-css', plugins_url('css/stripe-payment.css', __FILE__));
+}
+add_action('wp_enqueue_scripts', 'stripe_payment_integration_enqueue_scripts');
+<!-- payment_form.php -->
+<form id="stripe-payment-form">
+    <div class="form-row">
+        <label for="card-element">Credit or debit card</label>
+        <div id="card-element">
+            <!-- A Stripe Element will be inserted here. -->
+        </div>
+
+        <!-- Used to display Element errors. -->
+        <div id="card-errors" role="alert"></div>
+    </div>
+
+    <button id="submit-payment-btn">Submit Payment</button>
+</form>
+// stripe-payment.js
+document.addEventListener('DOMContentLoaded', function () {
+    var stripe = Stripe('YOUR_STRIPE_PUBLIC_KEY'); // Replace with your actual Stripe public key
+    var elements = stripe.elements();
+
+    var card = elements.create('card');
+    card.mount('#card-element');
+
+    card.on('change', function (event) {
+        var displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
+
+    var form = document.getElementById('stripe-payment-form');
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        stripe.createPaymentMethod({
+            type: 'card',
+            card: card
+        }).then(function (result) {
+            if (result.error) {
+                var errorElement = document.getElementById('card-errors');
+                errorElement.textContent = result.error.message;
+            } else {
+                // The payment method is created successfully.
+                // Submit the form to your server for further processing.
+                var paymentMethodId = result.paymentMethod.id;
+                // Add any additional data to the form if needed (e.g., amount, currency, etc.).
+
+                // Submit the form
+                form.submit();
+            }
+        });
+    });
+});
+[stripe_payment_form]
+// stripe_payment_integration.php
+// Add the following function to handle the shortcode
+function stripe_payment_form_shortcode_handler($atts) {
+    ob_start();
+    include(plugin_dir_path(__FILE__) . 'templates/payment_form.php');
+    return ob_get_clean();
+}
+add_shortcode('stripe_payment_form', 'stripe_payment_form_shortcode_handler');
